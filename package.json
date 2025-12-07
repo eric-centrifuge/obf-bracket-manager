@@ -1,0 +1,28 @@
+{
+  "name": "@jaxvex/obf-bracket-manager",
+  "version": "1.0.12",
+  "description": "A JavaScript utility for managing brackets using the Open Bracket Format.",
+  "types": "obf.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eric-centrifuge/obf-bracket-manager.git#master"
+  },
+  "dependencies": {
+    "typescript": "next"
+  },
+  "keywords": [
+    "bracket",
+    "competition",
+    "tournament",
+    "obf"
+  ],
+  "author": "Eric Harris",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eric-centrifuge/obf-bracket-manager/issues"
+  },
+  "homepage": "https://github.com/eric-centrifuge/obf-bracket-manager/tree/master#readme"
+}
