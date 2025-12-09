@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/eric-centrifuge/obf-bracket-manager/issues"
   },
-  "homepage": "https://github.com/eric-centrifuge/obf-bracket-manager/tree/master#readme"
+  "homepage": "https://github.com/eric-centrifuge/obf-bracket-manager/tree/master#readme",
+  "devDependencies": {
+    "tsdown": "^0.17.2"
+  }
 }
