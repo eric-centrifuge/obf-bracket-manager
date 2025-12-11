@@ -1,8 +1,7 @@
-
 //#region lib/classes/BracketSet.ts
 var BracketSet = class {
-	setId = void 0;
-	uuid = void 0;
+	setId;
+	uuid;
 	self;
 	leftEntrant;
 	rightEntrant;
@@ -92,17 +91,15 @@ var BracketSet = class {
 		if (!node) return;
 		if (!this.leftSet) this.addLeftSet(node);
 		else this.addRightSet(node);
-		node.setParentSet(this);
+		node.setParentSet(this.self);
 	}
 	addLeftSet(set) {
 		if (!set) return;
 		this.leftSet = set;
-		set.setParentSet(this);
 	}
 	addRightSet(set) {
 		if (!set) return;
 		this.rightSet = set;
-		set.setParentSet(this);
 	}
 	setLosersSet(losersSet) {
 		if (!losersSet) return;
@@ -124,7 +121,7 @@ var BracketSet = class {
 		else if (!this.rightEntrant) this.rightEntrant = entrant;
 	}
 	setParentSet(parent) {
-		if (parent) this.parentSet = parent;
+		this.parentSet = parent;
 	}
 	setMetaData(data) {
 		this.other = {
@@ -193,22 +190,20 @@ var BracketEvent = class {
 		this.entrants = this.createEntrants(entrants);
 		this.sets = [];
 		this.root = this.createBracket();
-		if (this.root) {
-			this.winnersRoot = this.root;
-			if (metaData) this.addMetaData(metaData);
-			if (this.entrants.length) this.assignEntrants();
-			if (layout.toLowerCase() === "single elimination") new Array(this.calculateRounds()).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "winners" })).reverse().flat().map((set, index) => {
-				set.placement = 2 + index;
+		this.winnersRoot = this.root;
+		if (metaData) this.addMetaData(metaData);
+		if (this.entrants.length) this.assignEntrants();
+		if (layout.toLowerCase() === "single elimination") new Array(this.calculateRounds()).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "winners" })).reverse().flat().map((set, index) => {
+			set.placement = 2 + index;
+			return set;
+		});
+		else if (layout.toLowerCase() === "double elimination") {
+			this.winnersRoot = this.attachLosersBracket(this.root);
+			const loserRounds = this.getAllLosersSets().slice(-1)[0].round;
+			new Array(loserRounds).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "losers" })).reverse().flat().map((set, index) => {
+				set.placement = 3 + index;
 				return set;
 			});
-			else if (layout.toLowerCase() === "double elimination") {
-				this.root = this.attachLosersBracket(this.root);
-				const loserRounds = this.getAllLosersSets().reverse()[0].round;
-				new Array(loserRounds).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "losers" })).reverse().flat().map((set, index) => {
-					set.placement = 3 + index;
-					return set;
-				});
-			}
 		}
 		if (sets) this.mapSets(sets);
 	}
@@ -261,8 +256,8 @@ var BracketEvent = class {
 				entrant2Result: `${entrant2Result}`,
 				entrant1Score,
 				entrant2Score,
-				entrant1NextSetID: `null`,
-				entrant2NextSetID: `null`,
+				entrant1NextSetID: parentSet ? `${parentSet.setId}` : "null",
+				entrant2NextSetID: parentSet ? `${parentSet.setId}` : "null",
 				entrant1PrevSetID: leftSet ? `${leftSet.setId}` : `null`,
 				entrant2PrevSetID: rightSet ? `${rightSet.setId}` : `null`,
 				games: [],
@@ -278,10 +273,10 @@ var BracketEvent = class {
 					winner,
 					loser,
 					matchLimit,
-					nextWinnerSet: parentSet && parentSet.setId,
-					nextLoserSet: loserSet && loserSet.setId,
-					nextLeftWinnerSlot: set.isLeftChild() ? parentSet.setId : `null`,
-					nextRightWinnerSlot: set.isRightChild() && !parentSet.rightEntrant ? parentSet.setId : `null`,
+					nextWinnerSet: parentSet && `${parentSet.setId}`,
+					nextLoserSet: loserSet && `${loserSet.setId}`,
+					nextLeftWinnerSlot: parentSet ? `${parentSet.setId}` : `null`,
+					nextRightWinnerSlot: parentSet ? `${parentSet.setId}` : `null`,
 					nextLeftLoserSlot: loserSet && loserSet.leftWinnerSet && loserSet.leftWinnerSet.setId === setId ? loserSet.setId : `null`,
 					nextRightLoserSlot: loserSet && loserSet.rightWinnerSet && loserSet.rightWinnerSet.setId === setId ? loserSet.setId : `null`,
 					leftSet: leftSet && leftSet.setId,
@@ -295,24 +290,39 @@ var BracketEvent = class {
 		if (!this.entrants) return;
 		const round1Sets = this.getSetsByRound(1, { type: "winners" });
 		const round2Sets = this.getSetsByRound(2, { type: "winners" });
-		const weavedAndPairedEntrants = this.weaveEntrants().map((entrant, index, array) => !(index % 2) ? [entrant, array[index + 1]] : void 0).filter((set) => set);
-		const byes = weavedAndPairedEntrants.filter((set) => set && !set[1]).map((set) => set[0]);
-		round1Sets.forEach((set, index) => {
-			const entrants = weavedAndPairedEntrants.filter((set$1) => set$1[1]);
-			if (!entrants[index]) return;
-			set.setEntrant(entrants[index][0]);
-			set.setEntrant(entrants[index][1]);
+		const round1Entrants = this.weaveEntrants();
+		const round1GroupedEntrants = Array(round1Entrants.length / 2).fill(0).map(() => {
+			const entrant1 = round1Entrants.shift();
+			const entrant2 = round1Entrants.shift();
+			return [this.entrants.find((entrant) => {
+				if (entrant1) return entrant.initialSeed === entrant1.initialSeed;
+				else return false;
+			}), this.entrants.find((entrant) => {
+				if (entrant2) return entrant.initialSeed === entrant2.initialSeed;
+				else return false;
+			})];
 		});
+		const byes = round1GroupedEntrants.filter((entrants) => entrants[0] && !entrants[1]).flat().filter((entrant) => entrant);
+		const fillRound1 = () => {
+			const round1Entrants$1 = round1GroupedEntrants.filter((entrants) => entrants[0] && entrants[1]).flat();
+			round1Sets.forEach((set, index) => {
+				const entrant1 = round1Entrants$1.shift();
+				const entrant2 = round1Entrants$1.shift();
+				entrant1 && set.setEntrant(entrant1);
+				set.setEntrant(entrant2);
+			});
+		};
+		fillRound1();
 		if (byes.length) round2Sets.forEach((set) => {
 			if (set.leftSet && !set.leftEntrant && !set.rightSet) set.setRightEntrant(byes.shift());
-			else if (!set.leftEntrant && !set.rightSet) {
-				set.setEntrant(byes.shift());
-				set.setEntrant(byes.shift());
-			}
+			else if (!set.leftEntrant && !set.rightSet) set.setEntrant(byes.shift());
 		});
 	}
 	createBracket(size = this.numberOfEntrants) {
-		if (size < 2) return;
+		if (size < 2) return new BracketSet_default({
+			setId: 0,
+			round: 0
+		});
 		let currentRound = 1;
 		let previousRoundSets = [];
 		const winnersSets = [];
@@ -337,12 +347,22 @@ var BracketEvent = class {
 				this.sets.push(set);
 			}
 			if (previousRoundSets.length) {
-				const weavedAndPairedEntrantIds = this.weaveEntrants().map((entrant) => entrant && entrant.entrantID).map((entrant, index, array) => !(index % 2) ? [entrant, array[index + 1]] : void 0).filter((set) => set).map((entrant, index, array) => !(index % 2) ? [entrant, array[index + 1]] : void 0).filter((set) => set);
+				const round1Entrants = this.orderSeeds()[1];
+				const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
+					const seed1 = round1Entrants.shift();
+					const seed2 = round1Entrants.shift();
+					return [this.entrants.find((entrant) => {
+						if (seed1) return entrant.initialSeed === seed1;
+						else return false;
+					}), this.entrants.find((entrant) => {
+						if (seed2) return entrant.initialSeed === seed2;
+						else return false;
+					})];
+				});
 				currentRoundSets.forEach((set, index) => {
-					const siblings = weavedAndPairedEntrantIds[index];
-					if (set.round === 2) {
-						if (siblings[0][0] && siblings[0][1]) set.addSet(previousRoundSets.shift());
-						if (siblings[1][0] && siblings[1][1]) set.addSet(previousRoundSets.shift());
+					if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
+						set.addSet(previousRoundSets.shift());
+						round1Sets[index][1] && set.addSet(previousRoundSets.shift());
 					} else {
 						set.addSet(previousRoundSets.shift());
 						set.addSet(previousRoundSets.shift());
@@ -373,7 +393,7 @@ var BracketEvent = class {
 	}
 	weaveEntrants() {
 		if (!this.entrants) return [];
-		return this.orderSeeds()[1].map((seed) => this.entrants.map((entrant) => entrant.initialSeed).includes(seed) ? seed : void 0).map((seed) => seed !== void 0 ? this.entrants.find((entrant) => entrant.initialSeed === seed) : void 0);
+		return this.orderSeeds()[1].map((seed) => this.entrants.find((entrant) => entrant.initialSeed === seed));
 	}
 	attachLosersBracket(winnersFinals) {
 		if (!winnersFinals) return winnersFinals;
@@ -568,6 +588,4 @@ var BracketEvent = class {
 var BracketEvent_default = BracketEvent;
 
 //#endregion
-exports.BracketEntrant = BracketEntrant_default;
-exports.BracketEvent = BracketEvent_default;
-exports.BracketSet = BracketSet_default;
+export { BracketEntrant_default as BracketEntrant, BracketEvent_default as BracketEvent, BracketSet_default as BracketSet };

@@ -173,8 +173,8 @@ declare enum SetStatus {
 //#endregion
 //#region lib/classes/BracketSet.d.ts
 declare class BracketSet {
-  setId: number | undefined;
-  uuid?: number | string | undefined;
+  setId: number;
+  uuid?: number | string;
   self: BracketSet;
   leftEntrant: BracketEntrant | undefined;
   rightEntrant: BracketEntrant | undefined;
@@ -255,7 +255,7 @@ declare class BracketEvent {
   winnersRoot?: BracketSet;
   losersRoot?: BracketSet;
   extraRoot?: BracketSet;
-  entrants?: Array<BracketEntrant>;
+  entrants: Array<BracketEntrant>;
   sets: Array<BracketSet>;
   layout: string;
   other?: {
@@ -275,9 +275,9 @@ declare class BracketEvent {
   createEntrants(entrants: IEntrant[]): BracketEntrant[];
   exportSets(): ISet[];
   assignEntrants(): void;
-  createBracket(size?: number): any;
-  orderSeeds(): any[];
-  weaveEntrants(): any;
+  createBracket(size?: number): BracketSet;
+  orderSeeds(): number[][];
+  weaveEntrants(): (BracketEntrant | undefined)[];
   attachLosersBracket(winnersFinals: BracketSet): BracketSet;
   linkLosersSets(losersBracket: BracketSet[]): BracketSet;
   createLosersBracket(winnersFinals: BracketSet): BracketSet;
