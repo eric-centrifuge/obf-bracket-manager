@@ -1,3 +1,4 @@
+
 //#region lib/classes/BracketSet.ts
 var BracketSet = class {
 	setId;
@@ -588,4 +589,6 @@ var BracketEvent = class {
 var BracketEvent_default = BracketEvent;
 
 //#endregion
-export { BracketEntrant_default as BracketEntrant, BracketEvent_default as BracketEvent, BracketSet_default as BracketSet };
+exports.BracketEntrant = BracketEntrant_default;
+exports.BracketEvent = BracketEvent_default;
+exports.BracketSet = BracketSet_default;

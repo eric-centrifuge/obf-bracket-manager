@@ -5,8 +5,8 @@
   "types": "obf.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsdown",
-    "watch": "tsdown --watch"
+    "build": "tsdown --format cjs,esm",
+    "watch": "tsdown --watch --format cjs,esm"
   },
   "repository": {
     "type": "git",

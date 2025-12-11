@@ -219,7 +219,7 @@ class BracketEvent {
                 .filter((entrants) => entrants[0] && entrants[1])
                 .flat()
             round1Sets
-                .forEach((set: BracketSet, index) => {
+                .forEach((set: BracketSet) => {
                     const entrant1 = round1Entrants.shift()
                     const entrant2 = round1Entrants.shift()
                     entrant1 && set.setEntrant(entrant1)
