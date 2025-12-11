@@ -4,7 +4,9 @@
   "description": "A JavaScript utility for managing brackets using the Open Bracket Format.",
   "types": "obf.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsdown",
+    "watch": "tsdown --watch"
   },
   "repository": {
     "type": "git",

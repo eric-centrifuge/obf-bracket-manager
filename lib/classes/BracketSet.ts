@@ -2,8 +2,8 @@ import BracketEntrant from "./BracketEntrant"
 import {SetGameResult} from "../@types/obf"
 
 class BracketSet {
-    setId: number | undefined = undefined
-    uuid?: number | string | undefined = undefined
+    setId: number
+    uuid?: number | string
     self: BracketSet
     leftEntrant: BracketEntrant | undefined
     rightEntrant: BracketEntrant | undefined
@@ -138,19 +138,17 @@ class BracketSet {
         if (!node) return
         if (!this.leftSet) this.addLeftSet(node)
         else this.addRightSet(node)
-        node.setParentSet(this)
+        node.setParentSet(this.self)
     }
 
     addLeftSet(set: BracketSet | undefined) {
         if (!set) return
         this.leftSet = set
-        set.setParentSet(this)
     }
 
     addRightSet(set: BracketSet | undefined) {
         if (!set) return
         this.rightSet = set
-        set.setParentSet(this)
     }
 
     setLosersSet(losersSet: BracketSet | undefined) {
@@ -176,7 +174,7 @@ class BracketSet {
         else if (!this.rightEntrant) this.rightEntrant = entrant
     }
 
-    setParentSet(parent: BracketSet) { if (parent) this.parentSet = parent }
+    setParentSet(parent: BracketSet) { this.parentSet = parent }
     setMetaData(data: {[key: string]: never}) { this.other = {...this.other, ...data} }
 
     updateScore(isP1: boolean, score: number) {
