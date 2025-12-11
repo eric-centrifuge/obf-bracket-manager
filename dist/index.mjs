@@ -243,23 +243,23 @@ var BracketEvent = class {
 	}
 	exportSets() {
 		return this.sets.map((set) => {
-			const { entrant1Ready, entrant2Ready, entrant1Reported, entrant2Reported, entrant1Result, entrant2Result, entrant1Score, entrant2Score, status, leftEntrant, rightEntrant, other, setId, round, startTime, endTime, onStream, winner, loser, parentSet, loserSet, leftSet, rightSet, type, numberToWin: matchLimit } = set;
+			const { entrant1Ready, entrant2Ready, entrant1Reported, entrant2Reported, entrant1Result, entrant2Result, entrant1Score, entrant2Score, status, leftEntrant, rightEntrant, other, setId, round, startTime, endTime, onStream, winner, loser, leftWinnerSet, rightWinnerSet, parentSet, loserSet, leftSet, rightSet, type, numberToWin: matchLimit } = set;
 			return {
 				setID: `${setId}`,
 				status,
 				phaseID: ``,
 				roundID: `${type === "winners" ? round : -round}`,
 				setFormat: `${this.layout}`,
-				entrant1ID: leftEntrant ? leftEntrant.entrantID : `null`,
-				entrant2ID: rightEntrant ? rightEntrant.entrantID : `null`,
+				entrant1ID: leftEntrant ? leftEntrant.entrantID : "null",
+				entrant2ID: rightEntrant ? rightEntrant.entrantID : "null",
 				entrant1Result: `${entrant1Result}`,
 				entrant2Result: `${entrant2Result}`,
 				entrant1Score,
 				entrant2Score,
 				entrant1NextSetID: parentSet ? `${parentSet.setId}` : "null",
 				entrant2NextSetID: parentSet ? `${parentSet.setId}` : "null",
-				entrant1PrevSetID: leftSet ? `${leftSet.setId}` : `null`,
-				entrant2PrevSetID: rightSet ? `${rightSet.setId}` : `null`,
+				entrant1PrevSetID: leftSet ? `${leftSet.setId}` : leftWinnerSet ? `${leftWinnerSet.setId}` : "null",
+				entrant2PrevSetID: rightSet ? `${rightSet.setId}` : rightWinnerSet ? `${rightWinnerSet.setId}` : "null",
 				games: [],
 				other: {
 					...other,
