@@ -235,8 +235,8 @@ class BracketEvent {
                 round2Sets
                     .forEach((set) => {
                         if (set.leftSet && !set.rightEntrant) set.setRightEntrant(byes.shift())
-                        else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return
-                        else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return
+                        else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return false
+                        else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return false
                         else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift())
                         else if (!set.leftSet && set.leftEntrant && !set.rightEntrant) set.setRightEntrant(byes.shift())
                         else set.setEntrant(byes.shift())
@@ -643,10 +643,7 @@ class BracketEvent {
             }
         }
 
-        else if ("round robin" === layout) {
-            const byes = this.findHighestPowerOf2(size) - size
-            return Math.floor(size / 2)
-        }
+        else if ("round robin" === layout) return Math.floor(size / 2)
 
         return 0
     }
