@@ -276,6 +276,13 @@ declare class BracketEvent {
   exportSets(): ISet[];
   assignEntrants(): void;
   createBracket(size?: number): BracketSet;
+  linkEliminationSets({
+    currentRoundSets,
+    previousRoundSets
+  }: {
+    currentRoundSets: BracketSet[];
+    previousRoundSets: BracketSet[];
+  }): void;
   orderSeeds(): number[][];
   weaveEntrants(): (BracketEntrant | undefined)[];
   attachLosersBracket(winnersFinals: BracketSet): BracketSet;
@@ -288,6 +295,15 @@ declare class BracketEvent {
     type?: "winners" | "losers";
   }): BracketSet[];
   calculateRounds(size?: number): number;
+  calculateNumberOfSetsPerRound: ({
+    round,
+    size,
+    previousRoundSets
+  }: {
+    round: number;
+    size: number;
+    previousRoundSets?: BracketSet[];
+  }) => number;
   findHighestPowerOf2(threshold?: number): number;
   isPowerOf2(x: number): boolean;
   addMetaData(data: {

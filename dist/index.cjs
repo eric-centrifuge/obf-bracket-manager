@@ -274,7 +274,7 @@ var BracketEvent = class {
 					winner,
 					loser,
 					matchLimit,
-					nextWinnerSet: parentSet && `${parentSet.setId}`,
+					nextWinnerSet: parentSet ? `${parentSet.setId}` : `null`,
 					nextLoserSet: loserSet && `${loserSet.setId}`,
 					nextLeftWinnerSlot: parentSet ? `${parentSet.setId}` : `null`,
 					nextRightWinnerSlot: parentSet ? `${parentSet.setId}` : `null`,
@@ -291,33 +291,54 @@ var BracketEvent = class {
 		if (!this.entrants) return;
 		const round1Sets = this.getSetsByRound(1, { type: "winners" });
 		const round2Sets = this.getSetsByRound(2, { type: "winners" });
-		const round1Entrants = this.weaveEntrants();
-		const round1GroupedEntrants = Array(round1Entrants.length / 2).fill(0).map(() => {
-			const entrant1 = round1Entrants.shift();
-			const entrant2 = round1Entrants.shift();
-			return [this.entrants.find((entrant) => {
-				if (entrant1) return entrant.initialSeed === entrant1.initialSeed;
-				else return false;
-			}), this.entrants.find((entrant) => {
-				if (entrant2) return entrant.initialSeed === entrant2.initialSeed;
-				else return false;
-			})];
-		});
-		const byes = round1GroupedEntrants.filter((entrants) => entrants[0] && !entrants[1]).flat().filter((entrant) => entrant);
-		const fillRound1 = () => {
-			const round1Entrants$1 = round1GroupedEntrants.filter((entrants) => entrants[0] && entrants[1]).flat();
-			round1Sets.forEach((set) => {
-				const entrant1 = round1Entrants$1.shift();
-				const entrant2 = round1Entrants$1.shift();
-				entrant1 && set.setEntrant(entrant1);
-				set.setEntrant(entrant2);
+		if (["single elimination", "double elimination"].includes(this.layout)) {
+			const round1Entrants = this.weaveEntrants();
+			const round1GroupedEntrants = Array(round1Entrants.length / 2).fill(0).map(() => {
+				const entrant1 = round1Entrants.shift();
+				const entrant2 = round1Entrants.shift();
+				return [this.entrants.find((entrant) => {
+					if (entrant1) return entrant.initialSeed === entrant1.initialSeed;
+					else return false;
+				}), this.entrants.find((entrant) => {
+					if (entrant2) return entrant.initialSeed === entrant2.initialSeed;
+					else return false;
+				})];
 			});
-		};
-		fillRound1();
-		if (byes.length) round2Sets.forEach((set) => {
-			if (set.leftSet && !set.leftEntrant && !set.rightSet) set.setRightEntrant(byes.shift());
-			else if (!set.leftEntrant && !set.rightSet) set.setEntrant(byes.shift());
-		});
+			const byes = round1GroupedEntrants.filter((entrants) => entrants[0] && !entrants[1]).flat().filter((entrant) => entrant);
+			const fillRound1 = () => {
+				const round1Entrants$1 = round1GroupedEntrants.filter((entrants) => entrants[0] && entrants[1]).flat();
+				round1Sets.forEach((set) => {
+					const entrant1 = round1Entrants$1.shift();
+					const entrant2 = round1Entrants$1.shift();
+					entrant1 && set.setEntrant(entrant1);
+					set.setEntrant(entrant2);
+				});
+			};
+			fillRound1();
+			while (byes.length) round2Sets.forEach((set) => {
+				if (set.leftSet && !set.rightEntrant) set.setRightEntrant(byes.shift());
+				else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return;
+				else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return;
+				else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift());
+				else if (!set.leftSet && set.leftEntrant && !set.rightEntrant) set.setRightEntrant(byes.shift());
+				else set.setEntrant(byes.shift());
+			});
+		} else if (this.layout === "round robin") {
+			const numberOfByes = this.numberOfEntrants % 2 ? 1 : 0;
+			const round1Entrants = this.entrants.sort((a, b) => a.initialSeed - b.initialSeed).slice(numberOfByes);
+			round1Sets.forEach((set) => {
+				const entrant1 = round1Entrants.shift();
+				const entrant2 = round1Entrants.shift();
+				entrant1 && set.setEntrant(entrant1);
+				entrant2 && set.setEntrant(entrant2);
+			});
+			if (numberOfByes) {
+				const byes = this.entrants.sort((a, b) => a.initialSeed - b.initialSeed).slice(0, numberOfByes);
+				round2Sets.forEach((set) => {
+					set.setEntrant(byes.shift());
+				});
+			}
+		}
 	}
 	createBracket(size = this.numberOfEntrants) {
 		if (size < 2) return new BracketSet_default({
@@ -328,18 +349,14 @@ var BracketEvent = class {
 		let previousRoundSets = [];
 		const winnersSets = [];
 		const numberOfRounds = this.calculateRounds(size);
-		const byesFromRound1 = this.findHighestPowerOf2(size) - size;
-		const calculateNumberOfSets = (round) => {
-			switch (round) {
-				case 1: return (size - byesFromRound1) / 2;
-				case 2: return (byesFromRound1 + previousRoundSets.length) / 2;
-				default: return previousRoundSets.length / 2;
-			}
-		};
 		while (currentRound <= numberOfRounds) {
 			const lastIndex = previousRoundSets.length ? previousRoundSets.slice(-1)[0].setId : 0;
 			const currentRoundSets = [];
-			for (let index = 0; index < calculateNumberOfSets(currentRound); index++) {
+			for (let index = 0; index < this.calculateNumberOfSetsPerRound({
+				round: currentRound,
+				size,
+				previousRoundSets
+			}); index++) {
 				const set = new BracketSet_default({
 					setId: index + 1 + (lastIndex || 0),
 					round: currentRound
@@ -348,26 +365,9 @@ var BracketEvent = class {
 				this.sets.push(set);
 			}
 			if (previousRoundSets.length) {
-				const round1Entrants = this.orderSeeds()[1];
-				const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
-					const seed1 = round1Entrants.shift();
-					const seed2 = round1Entrants.shift();
-					return [this.entrants.find((entrant) => {
-						if (seed1) return entrant.initialSeed === seed1;
-						else return false;
-					}), this.entrants.find((entrant) => {
-						if (seed2) return entrant.initialSeed === seed2;
-						else return false;
-					})];
-				});
-				currentRoundSets.forEach((set, index) => {
-					if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
-						set.addSet(previousRoundSets.shift());
-						round1Sets[index][1] && set.addSet(previousRoundSets.shift());
-					} else {
-						set.addSet(previousRoundSets.shift());
-						set.addSet(previousRoundSets.shift());
-					}
+				if (["single elimination", "double elimination"].includes(this.layout)) this.linkEliminationSets({
+					currentRoundSets,
+					previousRoundSets
 				});
 			}
 			previousRoundSets = currentRoundSets;
@@ -375,6 +375,29 @@ var BracketEvent = class {
 			currentRound++;
 		}
 		return winnersSets && winnersSets.slice(-1)[0];
+	}
+	linkEliminationSets({ currentRoundSets, previousRoundSets }) {
+		const round1Entrants = this.orderSeeds()[1];
+		const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
+			const seed1 = round1Entrants.shift();
+			const seed2 = round1Entrants.shift();
+			return [this.entrants.find((entrant) => {
+				if (seed1) return entrant.initialSeed === seed1;
+				else return false;
+			}), this.entrants.find((entrant) => {
+				if (seed2) return entrant.initialSeed === seed2;
+				else return false;
+			})];
+		});
+		currentRoundSets.forEach((set, index) => {
+			if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
+				set.addSet(previousRoundSets.shift());
+				round1Sets[index][1] && set.addSet(previousRoundSets.shift());
+			} else {
+				set.addSet(previousRoundSets.shift());
+				set.addSet(previousRoundSets.shift());
+			}
+		});
 	}
 	orderSeeds() {
 		const totalRounds = this.calculateRounds();
@@ -414,11 +437,14 @@ var BracketEvent = class {
 		if (this.numberOfEntrants > 2) {
 			winnersFinals.setLosersSet(this.losersRoot);
 			grandFinals.addLeftSet(winnersFinals);
+			winnersFinals.setParentSet(grandFinals);
 			grandFinals.addRightSet(this.losersRoot);
+			this.losersRoot.setParentSet(grandFinals);
 			grandFinals.setLosersSet(grandFinalsReset);
 			this.root = grandFinals;
 			this.extraRoot = grandFinalsReset;
 			grandFinalsReset.addSet(grandFinals);
+			grandFinals.setParentSet(grandFinalsReset);
 		}
 		return grandFinalsReset;
 	}
@@ -569,9 +595,26 @@ var BracketEvent = class {
 	}
 	calculateRounds(size = this.numberOfEntrants) {
 		let rounds = 1;
-		while (Math.pow(2, rounds) < size) rounds++;
+		const layout = this.layout;
+		if (["single elimination", "double elimination"].includes(this.layout)) while (Math.pow(2, rounds) < size) rounds++;
+		if ("round robin" === layout) rounds = size - 1;
 		return rounds;
 	}
+	calculateNumberOfSetsPerRound = ({ round, size, previousRoundSets = this.getSetsByRound(round - 1) }) => {
+		const layout = this.layout;
+		if (["single elimination", "double elimination"].includes(this.layout)) {
+			const byesFromRound1 = this.findHighestPowerOf2(size) - size;
+			switch (round) {
+				case 1: return (size - byesFromRound1) / 2;
+				case 2: return (byesFromRound1 + previousRoundSets.length) / 2;
+				default: return previousRoundSets.length / 2;
+			}
+		} else if ("round robin" === layout) {
+			this.findHighestPowerOf2(size) - size;
+			return Math.floor(size / 2);
+		}
+		return 0;
+	};
 	findHighestPowerOf2(threshold = this.numberOfEntrants) {
 		if (threshold < 2) return threshold;
 		if (this.isPowerOf2(threshold)) return threshold;
