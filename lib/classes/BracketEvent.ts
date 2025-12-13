@@ -234,12 +234,13 @@ class BracketEvent {
             while (byes.length) {
                 round2Sets
                     .forEach((set) => {
-                        if (set.leftSet && !set.rightEntrant) set.setRightEntrant(byes.shift())
-                        else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return false
-                        else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return false
-                        else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift())
-                        else if (!set.leftSet && set.leftEntrant && !set.rightEntrant) set.setRightEntrant(byes.shift())
-                        else set.setEntrant(byes.shift())
+                        if (!set.leftSet && !set.rightSet) {
+                            if (!set.leftEntrant) set.setLeftEntrant(byes.shift())
+                            if (!set.rightEntrant) set.setRightEntrant(byes.shift())
+                        } else {
+                            if (!set.rightSet && !set.rightEntrant) set.setRightEntrant(byes.shift())
+                            else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift())
+                        }
                     })
             }
         }
@@ -324,7 +325,7 @@ class BracketEvent {
         })
 
         currentRoundSets
-            .forEach((set, index) => {
+            .forEach((set) => {
                 if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
                     const round1Set1 = round1Sets.shift()
                     round1Set1 && round1Set1[1] && set.addSet(previousRoundSets.shift())

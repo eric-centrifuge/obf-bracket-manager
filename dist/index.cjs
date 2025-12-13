@@ -316,12 +316,11 @@ var BracketEvent = class {
 			};
 			fillRound1();
 			while (byes.length) round2Sets.forEach((set) => {
-				if (set.leftSet && !set.rightEntrant) set.setRightEntrant(byes.shift());
-				else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return false;
-				else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return false;
+				if (!set.leftSet && !set.rightSet) {
+					if (!set.leftEntrant) set.setLeftEntrant(byes.shift());
+					if (!set.rightEntrant) set.setRightEntrant(byes.shift());
+				} else if (!set.rightSet && !set.rightEntrant) set.setRightEntrant(byes.shift());
 				else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift());
-				else if (!set.leftSet && set.leftEntrant && !set.rightEntrant) set.setRightEntrant(byes.shift());
-				else set.setEntrant(byes.shift());
 			});
 		} else if (this.layout === "round robin") {
 			const numberOfByes = this.numberOfEntrants % 2 ? 1 : 0;
@@ -381,7 +380,7 @@ var BracketEvent = class {
 		const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
 			return [round1Entrants.shift(), round1Entrants.shift()];
 		});
-		currentRoundSets.forEach((set, index) => {
+		currentRoundSets.forEach((set) => {
 			if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
 				const round1Set1 = round1Sets.shift();
 				round1Set1 && round1Set1[1] && set.addSet(previousRoundSets.shift());
