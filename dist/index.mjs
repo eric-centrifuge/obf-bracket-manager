@@ -316,8 +316,8 @@ var BracketEvent = class {
 			fillRound1();
 			while (byes.length) round2Sets.forEach((set) => {
 				if (set.leftSet && !set.rightEntrant) set.setRightEntrant(byes.shift());
-				else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return;
-				else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return;
+				else if (set.leftSet && !set.leftEntrant && set.rightEntrant) return false;
+				else if (set.leftSet && set.rightSet && !set.leftEntrant && !set.rightEntrant) return false;
 				else if (!set.leftSet && !set.leftEntrant) set.setLeftEntrant(byes.shift());
 				else if (!set.leftSet && set.leftEntrant && !set.rightEntrant) set.setRightEntrant(byes.shift());
 				else set.setEntrant(byes.shift());
@@ -376,22 +376,16 @@ var BracketEvent = class {
 		return winnersSets && winnersSets.slice(-1)[0];
 	}
 	linkEliminationSets({ currentRoundSets, previousRoundSets }) {
-		const round1Entrants = this.orderSeeds()[1];
+		const round1Entrants = this.orderSeeds()[1].map((seed) => this.entrants.find((entrant) => entrant.initialSeed === seed));
 		const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
-			const seed1 = round1Entrants.shift();
-			const seed2 = round1Entrants.shift();
-			return [this.entrants.find((entrant) => {
-				if (seed1) return entrant.initialSeed === seed1;
-				else return false;
-			}), this.entrants.find((entrant) => {
-				if (seed2) return entrant.initialSeed === seed2;
-				else return false;
-			})];
+			return [round1Entrants.shift(), round1Entrants.shift()];
 		});
 		currentRoundSets.forEach((set, index) => {
 			if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
-				set.addSet(previousRoundSets.shift());
-				round1Sets[index][1] && set.addSet(previousRoundSets.shift());
+				const round1Set1 = round1Sets.shift();
+				round1Set1 && round1Set1[1] && set.addSet(previousRoundSets.shift());
+				const round1Set2 = round1Sets.shift();
+				round1Set2 && round1Set2[1] && set.addSet(previousRoundSets.shift());
 			} else {
 				set.addSet(previousRoundSets.shift());
 				set.addSet(previousRoundSets.shift());
@@ -608,10 +602,7 @@ var BracketEvent = class {
 				case 2: return (byesFromRound1 + previousRoundSets.length) / 2;
 				default: return previousRoundSets.length / 2;
 			}
-		} else if ("round robin" === layout) {
-			this.findHighestPowerOf2(size) - size;
-			return Math.floor(size / 2);
-		}
+		} else if ("round robin" === layout) return Math.floor(size / 2);
 		return 0;
 	};
 	findHighestPowerOf2(threshold = this.numberOfEntrants) {

@@ -316,27 +316,20 @@ class BracketEvent {
         currentRoundSets: BracketSet[]
         previousRoundSets: BracketSet[]
     }) {
-        const round1Entrants = this.orderSeeds()[1]
+        const round1Entrants =
+            this.orderSeeds()[1]
+                .map((seed) => this.entrants.find((entrant) => entrant.initialSeed === seed))
         const round1Sets = Array(this.orderSeeds()[1].length / 2).fill(0).map(() => {
-            const seed1 = round1Entrants.shift()
-            const seed2 = round1Entrants.shift()
-            return [
-                this.entrants.find((entrant) => {
-                    if (seed1) return entrant.initialSeed === seed1
-                    else return false
-                }),
-                this.entrants.find((entrant) => {
-                    if (seed2) return entrant.initialSeed === seed2
-                    else return false
-                })
-            ]
+            return [round1Entrants.shift(), round1Entrants.shift()]
         })
 
         currentRoundSets
             .forEach((set, index) => {
                 if (set.round === 2 && !this.isPowerOf2(this.numberOfEntrants)) {
-                    set.addSet(previousRoundSets.shift())
-                    round1Sets[index][1] && set.addSet(previousRoundSets.shift())
+                    const round1Set1 = round1Sets.shift()
+                    round1Set1 && round1Set1[1] && set.addSet(previousRoundSets.shift())
+                    const round1Set2 = round1Sets.shift()
+                    round1Set2 && round1Set2[1] && set.addSet(previousRoundSets.shift())
                 } else {
                     set.addSet(previousRoundSets.shift())
                     set.addSet(previousRoundSets.shift())
