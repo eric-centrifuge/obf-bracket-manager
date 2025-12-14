@@ -190,10 +190,10 @@ var BracketEvent = class {
 		this.layout = layout;
 		this.entrants = this.createEntrants(entrants);
 		this.sets = [];
-		this.root = this.entrants.length ? this.createBracket() : void 0;
+		this.root = this.entrants.length > 1 ? this.createBracket() : void 0;
 		this.winnersRoot = this.root;
 		if (metaData) this.addMetaData(metaData);
-		if (this.entrants.length) this.assignEntrants();
+		if (this.entrants.length > 1) this.assignEntrants();
 		if (this.root) {
 			if (layout.toLowerCase() === "single elimination") new Array(this.calculateRounds()).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "winners" })).reverse().flat().map((set, index) => {
 				set.placement = 2 + index;

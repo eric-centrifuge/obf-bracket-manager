@@ -37,11 +37,11 @@ class BracketEvent {
         this.layout = layout
         this.entrants = this.createEntrants(entrants)
         this.sets = []
-        this.root = this.entrants.length ? this.createBracket() : undefined
+        this.root = this.entrants.length > 1 ? this.createBracket() : undefined
         this.winnersRoot = this.root
 
         if (metaData) this.addMetaData(metaData)
-        if (this.entrants.length) this.assignEntrants()
+        if (this.entrants.length > 1) this.assignEntrants()
 
         if (this.root) {
             if (layout.toLowerCase() === "single elimination") {
