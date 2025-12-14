@@ -5,7 +5,7 @@ import {IEntrant, ISet, SetGameResult, SetStatus} from "../@types/obf"
 class BracketEvent {
     id?: string
     numberOfEntrants = 3
-    root: BracketSet
+    root: BracketSet | undefined
     state: string = "pending"
     winnersRoot?: BracketSet
     losersRoot?: BracketSet
@@ -37,39 +37,41 @@ class BracketEvent {
         this.layout = layout
         this.entrants = this.createEntrants(entrants)
         this.sets = []
-        this.root = this.createBracket()
+        this.root = this.entrants.length ? this.createBracket() : undefined
         this.winnersRoot = this.root
 
         if (metaData) this.addMetaData(metaData)
         if (this.entrants.length) this.assignEntrants()
 
-        if (layout.toLowerCase() === "single elimination") {
-            new Array(this.calculateRounds())
-                .fill(0)
-                .map((number, index) => this.getSetsByRound(number + index + 1, {type: "winners" }))
-                .reverse()
-                .flat()
-                .map((set, index) => {
-                    set.placement = 2 + index
-                    return set
-                })
-        }
-        else if (layout.toLowerCase() === 'double elimination') {
-            this.winnersRoot = this.attachLosersBracket(this.root!)
-            const loserRounds = this.getAllLosersSets().slice(-1)[0].round
+        if (this.root) {
+            if (layout.toLowerCase() === "single elimination") {
+                new Array(this.calculateRounds())
+                    .fill(0)
+                    .map((number, index) => this.getSetsByRound(number + index + 1, {type: "winners" }))
+                    .reverse()
+                    .flat()
+                    .map((set, index) => {
+                        set.placement = 2 + index
+                        return set
+                    })
+            }
+            else if (layout.toLowerCase() === 'double elimination') {
+                this.winnersRoot = this.attachLosersBracket(this.root!)
+                const loserRounds = this.getAllLosersSets().slice(-1)[0].round
 
-            new Array(loserRounds)
-                .fill(0)
-                .map((number, index) => this.getSetsByRound(number + index + 1, {type: "losers" }))
-                .reverse()
-                .flat()
-                .map((set, index) => {
-                    set.placement = 3 + index
-                    return set
-                })
-        }
+                new Array(loserRounds)
+                    .fill(0)
+                    .map((number, index) => this.getSetsByRound(number + index + 1, {type: "losers" }))
+                    .reverse()
+                    .flat()
+                    .map((set, index) => {
+                        set.placement = 3 + index
+                        return set
+                    })
+            }
 
-        if (sets) this.mapSets(sets)
+            if (sets) this.mapSets(sets)
+        }
     }
 
     mapSets (importedSets: ISet[]) {
@@ -452,9 +454,9 @@ class BracketEvent {
                         })
 
                     this.getAllWinnersSets()
-                        .filter((set) => set.loserSet)
+                        .filter((set) => set && set.loserSet)
                         .forEach((set) => {
-                            firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet.setId !== set.setId)
+                            firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId)
                         })
 
                     break

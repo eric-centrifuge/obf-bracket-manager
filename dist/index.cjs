@@ -190,23 +190,25 @@ var BracketEvent = class {
 		this.layout = layout;
 		this.entrants = this.createEntrants(entrants);
 		this.sets = [];
-		this.root = this.createBracket();
+		this.root = this.entrants.length ? this.createBracket() : void 0;
 		this.winnersRoot = this.root;
 		if (metaData) this.addMetaData(metaData);
 		if (this.entrants.length) this.assignEntrants();
-		if (layout.toLowerCase() === "single elimination") new Array(this.calculateRounds()).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "winners" })).reverse().flat().map((set, index) => {
-			set.placement = 2 + index;
-			return set;
-		});
-		else if (layout.toLowerCase() === "double elimination") {
-			this.winnersRoot = this.attachLosersBracket(this.root);
-			const loserRounds = this.getAllLosersSets().slice(-1)[0].round;
-			new Array(loserRounds).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "losers" })).reverse().flat().map((set, index) => {
-				set.placement = 3 + index;
+		if (this.root) {
+			if (layout.toLowerCase() === "single elimination") new Array(this.calculateRounds()).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "winners" })).reverse().flat().map((set, index) => {
+				set.placement = 2 + index;
 				return set;
 			});
+			else if (layout.toLowerCase() === "double elimination") {
+				this.winnersRoot = this.attachLosersBracket(this.root);
+				const loserRounds = this.getAllLosersSets().slice(-1)[0].round;
+				new Array(loserRounds).fill(0).map((number, index) => this.getSetsByRound(number + index + 1, { type: "losers" })).reverse().flat().map((set, index) => {
+					set.placement = 3 + index;
+					return set;
+				});
+			}
+			if (sets) this.mapSets(sets);
 		}
-		if (sets) this.mapSets(sets);
 	}
 	mapSets(importedSets) {
 		importedSets.forEach((importedSet) => {
@@ -480,8 +482,8 @@ var BracketEvent = class {
 							round1Set.setLosersSet(nextRoundSets[index]);
 						}
 					});
-					this.getAllWinnersSets().filter((set) => set.loserSet).forEach((set) => {
-						firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet.setId !== set.setId);
+					this.getAllWinnersSets().filter((set) => set && set.loserSet).forEach((set) => {
+						firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId);
 					});
 					break;
 				default:

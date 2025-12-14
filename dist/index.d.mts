@@ -250,7 +250,7 @@ declare class BracketSet {
 declare class BracketEvent {
   id?: string;
   numberOfEntrants: number;
-  root: BracketSet;
+  root: BracketSet | undefined;
   state: string;
   winnersRoot?: BracketSet;
   losersRoot?: BracketSet;
@@ -288,7 +288,7 @@ declare class BracketEvent {
   attachLosersBracket(winnersFinals: BracketSet): BracketSet;
   linkLosersSets(losersBracket: BracketSet[]): BracketSet;
   createLosersBracket(winnersFinals: BracketSet): BracketSet;
-  getAllWinnersSets(): BracketSet[];
+  getAllWinnersSets(): (BracketSet | undefined)[];
   getAllLosersSets(): BracketSet[];
   getSetsByRound(round: number, filters?: {
     set?: BracketSet;
