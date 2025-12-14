@@ -57,7 +57,8 @@ class BracketEvent {
             }
             else if (layout.toLowerCase() === 'double elimination') {
                 this.winnersRoot = this.attachLosersBracket(this.root!)
-                const loserRounds = this.getAllLosersSets().slice(-1)[0].round
+                const losersFinals = this.getAllLosersSets().slice(-1)[0]
+                const loserRounds = losersFinals ? losersFinals.round : 0
 
                 new Array(loserRounds)
                     .fill(0)
