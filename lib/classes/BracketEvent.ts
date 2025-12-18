@@ -249,28 +249,34 @@ class BracketEvent {
         }
 
         else if (this.layout === "round robin") {
-            const numberOfByes = this.numberOfEntrants % 2 ? 1 : 0
-            const round1Entrants =
+            const totalRounds = this.calculateRounds()
+            const entrants =
                 this.entrants
                     .sort((a, b) => a.initialSeed - b.initialSeed)
-                    .slice(numberOfByes)
-            round1Sets
-                .forEach((set) => {
-                    const entrant1 = round1Entrants.shift()
-                    const entrant2 = round1Entrants.shift()
-                    entrant1 && set.setEntrant(entrant1)
-                    entrant2 && set.setEntrant(entrant2)
-                })
+                    .slice(0)
+            let rotatingIndex = 0
 
-            if (numberOfByes) {
-                const byes =
-                    this.entrants
-                        .sort((a, b) => a.initialSeed - b.initialSeed)
-                        .slice(0, numberOfByes)
-                round2Sets
-                    .forEach((set) => {
-                        set.setEntrant(byes.shift())
+            if (this.entrants.length % 2) entrants.push(undefined as unknown as BracketEntrant)
+
+            for (let round = 1; round <= totalRounds; round++) {
+                const roundSets = this.getSetsByRound(round)
+                const entrantPairs = new Array(entrants.length / 2)
+                    .fill(0)
+                    .map((value, index) => [entrants[index], entrants[entrants.length - 1 - index]])
+
+                entrantPairs
+                    .forEach(([entrant1, entrant2]) => {
+                        if (entrant1 && entrant2) {
+                            const set = roundSets.shift()!
+                            if (set) {
+                                set.setLeftEntrant(entrant1)
+                                set.setRightEntrant(entrant2)
+                                rotatingIndex = rotatingIndex >= entrants.length - 1 ? 0 : rotatingIndex + 1
+                            }
+                        }
                     })
+
+                entrants.splice(1, 0, entrants.pop()!)
             }
         }
     }
@@ -613,7 +619,7 @@ class BracketEvent {
         if (["single elimination", "double elimination"].includes(this.layout))
             while (Math.pow(2,rounds) < size) rounds++
         if ("round robin" === layout)
-            rounds = size - 1
+            rounds = size
 
         return rounds
     }
