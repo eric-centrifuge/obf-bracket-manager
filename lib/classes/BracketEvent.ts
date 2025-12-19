@@ -619,8 +619,7 @@ class BracketEvent {
         if (["single elimination", "double elimination"].includes(this.layout))
             while (Math.pow(2,rounds) < size) rounds++
         if ("round robin" === layout)
-            rounds = size
-
+            rounds = this.entrants.length % 2 ? size : size - 1
         return rounds
     }
 
