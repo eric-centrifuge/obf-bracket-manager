@@ -21,7 +21,7 @@ class BracketEntrant {
             states: { active: boolean }
         }
         initialSeed: number
-        finalPlacement: number
+        finalPlacement?: number
         entrantID: string
     }) {
         const {

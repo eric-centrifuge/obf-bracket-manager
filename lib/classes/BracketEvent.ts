@@ -1,6 +1,6 @@
 import BracketSet from "./BracketSet"
 import BracketEntrant from "./BracketEntrant"
-import {IEntrant, ISet, SetGameResult, SetStatus} from "../@types/obf"
+import {Entrant, Set, SetGameResult, SetStatus } from "../@types/obf"
 
 class BracketEvent {
     id?: string
@@ -17,8 +17,8 @@ class BracketEvent {
 
     constructor(props: {
         id?: string
-        sets?: ISet[]
-        entrants: IEntrant[]
+        sets?: Set[]
+        entrants: Entrant[]
         layout: string
         metaData?: {[key: string]: any}
         state?: string
@@ -75,7 +75,7 @@ class BracketEvent {
         }
     }
 
-    mapSets (importedSets: ISet[]) {
+    mapSets (importedSets: Set[]) {
         importedSets
             .forEach((importedSet) => {
                 const bracketSet = this.sets.find((set) => `${set.setId}` === `${importedSet.setID}`)
@@ -105,17 +105,16 @@ class BracketEvent {
             })
     }
 
-    createEntrants (entrants: IEntrant[]): BracketEntrant[] {
+    createEntrants (entrants: Entrant[]): BracketEntrant[] {
         return entrants.map((entrant, index) => new BracketEntrant({
             entrantID: entrant.entrantID,
             initialSeed: entrant.initialSeed || index + 1,
             entrantTag: entrant.entrantTag,
-            finalPlacement: entrant.finalPlacement,
             other: { ...entrant.other },
         }))
     }
 
-    exportSets (): ISet[] {
+    exportSets (): Set[] {
         return this.sets.map((set) => {
             const {
                 entrant1Ready,
