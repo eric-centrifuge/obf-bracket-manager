@@ -1,6 +1,6 @@
 {
   "name": "@jaxvex/obf-bracket-manager",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "A JavaScript utility for managing brackets using the Open Bracket Format.",
   "types": "obf.ts",
   "scripts": {
