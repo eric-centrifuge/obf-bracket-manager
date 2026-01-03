@@ -183,7 +183,7 @@ export enum EventState {
 }
 
 export enum TournamentStructures {
-    SingleElimination = "single-elim",
-    DoubleElimination = "double-elim",
-    RoundRobin = "round-robin",
+    SingleElimination = "single elimination",
+    DoubleElimination = "double elimination",
+    RoundRobin = "round robin",
 }
