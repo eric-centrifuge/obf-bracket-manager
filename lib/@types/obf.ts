@@ -86,9 +86,9 @@ export interface Set {
      * This is a required field and should be ordered with the rest of the set IDs. */
     setID: string
     /** The [ID]{@link Entrant.entrantID} for the first entrant. */
-    entrant1ID: string
+    entrant1ID: string | undefined
     /** The [ID]{@link Entrant.entrantID} of the second entrant. */
-    entrant2ID: string
+    entrant2ID: string | undefined
     /** The current [status]{@link SetStatus} for this set. This field is required. */
     status: SetStatus
     /** The final [result]{@link SetGameResult} for entrant 1. */
