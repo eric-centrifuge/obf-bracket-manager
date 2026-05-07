@@ -451,7 +451,7 @@ var BracketEvent = class {
 				});
 			};
 			fillRound1();
-			while (byes.length) round2Sets.forEach((set) => {
+			round2Sets.forEach((set) => {
 				if (!set.leftSet && !set.rightSet) {
 					if (!set.leftEntrant) set.assignLeftEntrant(byes.shift());
 					if (!set.rightEntrant) set.assignRightEntrant(byes.shift());

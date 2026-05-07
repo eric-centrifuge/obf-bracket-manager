@@ -233,18 +233,16 @@ class BracketEvent {
 
             fillRound1()
 
-            while (byes.length) {
-                round2Sets
-                    .forEach((set) => {
-                        if (!set.leftSet && !set.rightSet) {
-                            if (!set.leftEntrant) set.assignLeftEntrant(byes.shift())
-                            if (!set.rightEntrant) set.assignRightEntrant(byes.shift())
-                        } else {
-                            if (!set.rightSet && !set.rightEntrant) set.assignRightEntrant(byes.shift())
-                            else if (!set.leftSet && !set.leftEntrant) set.assignLeftEntrant(byes.shift())
-                        }
-                    })
-            }
+            round2Sets
+                .forEach((set) => {
+                    if (!set.leftSet && !set.rightSet) {
+                        if (!set.leftEntrant) set.assignLeftEntrant(byes.shift())
+                        if (!set.rightEntrant) set.assignRightEntrant(byes.shift())
+                    } else {
+                        if (!set.rightSet && !set.rightEntrant) set.assignRightEntrant(byes.shift())
+                        else if (!set.leftSet && !set.leftEntrant) set.assignLeftEntrant(byes.shift())
+                    }
+                })
         } else if (this.layout === TournamentStructures.RoundRobin) {
             const totalRounds = this.calculateRounds()
             entrants =
