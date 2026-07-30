@@ -345,9 +345,10 @@ declare class BracketEvent {
   entrants: Array<BracketEntrant>;
   sets: Array<BracketSet>;
   state: string;
+  roundThreshold: number;
   layout: TournamentStructures | string;
   numberOfEntrants: number;
-  root: BracketSet | undefined;
+  root: BracketSet;
   extraRoot?: BracketSet;
   upperBracketRoot?: BracketSet;
   lowerBracketRoot?: BracketSet;
@@ -359,7 +360,9 @@ declare class BracketEvent {
       [key: string]: any;
     };
     state?: string;
+    roundThreshold?: number;
   });
+  trimSets(threshold: number): BracketSet[];
   /**
    * Maps imported [sets]{@link Set} to [bracket sets.]{@link BracketSet}
    * @param importedSets - Sets from a [tournament]{@link Tournament}
@@ -432,7 +435,7 @@ declare class BracketEvent {
    * Will default to all available sets if there is no lower bracket.
    * @returns - Array of [bracket sets]{@link BracketSet} from the upper bracket.
    * */
-  getAllUpperBracketSets(): (BracketSet | undefined)[];
+  getAllUpperBracketSets(): BracketSet[];
   /**
    * Get all [bracket sets]{@link BracketSet} from the lower bracket.
    * Will default to all available sets if there is no lower bracket.

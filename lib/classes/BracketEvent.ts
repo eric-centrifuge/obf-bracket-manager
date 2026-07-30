@@ -15,9 +15,10 @@ class BracketEvent {
     entrants: Array<BracketEntrant> = []
     sets: Array<BracketSet> = []
     state: string = EventState.Pending
+    roundThreshold: number
     layout: TournamentStructures | string = TournamentStructures.SingleElimination
     numberOfEntrants = 3
-    root: BracketSet | undefined
+    root: BracketSet
     extraRoot?: BracketSet
     upperBracketRoot?: BracketSet
     lowerBracketRoot?: BracketSet
@@ -28,19 +29,22 @@ class BracketEvent {
         layout: TournamentStructures | string
         metaData?: {[key: string]: any}
         state?: string
+        roundThreshold?: number
     }) {
         const {
             entrants,
             layout,
             state,
-            sets
+            sets,
+            roundThreshold
         } = props
         this.state = state || EventState.Pending
         this.numberOfEntrants = entrants.length
         this.layout = layout
+        this.roundThreshold = Math.abs(roundThreshold ?? 0)
         this.entrants = this.createEntrants(entrants)
         this.sets = []
-        this.root = this.entrants.length > 1 ? this.createBracketSets() : undefined
+        this.root = this.createBracketSets()
         this.upperBracketRoot = this.root
 
         if (this.entrants.length > 1) this.assignEntrants(this.entrants)
@@ -73,7 +77,24 @@ class BracketEvent {
             }
 
             if (sets) this.mapSets(sets)
+            if (this.roundThreshold > 0) this.sets = this.trimSets(this.roundThreshold)
         }
+    }
+
+    trimSets (threshold: number) {
+        if (threshold <= 2) return this.sets.filter((set) => set.round <= 2)
+        const trimmedSets =
+            this.getAllUpperBracketSets()
+                .filter((set) => set.round <= threshold)
+        if (this.layout === TournamentStructures.DoubleElimination) {
+            const finalSet = trimmedSets.slice(-1)[0]
+            const loserRoundThreshold = finalSet.loserSet ? finalSet.loserSet.round : 0
+            trimmedSets.push(
+                ...this.getAllLowerBracketSets()
+                    .filter((set) => set.round <= loserRoundThreshold)
+            )
+        }
+        return trimmedSets.length ? trimmedSets : this.sets
     }
 
     /**
@@ -447,81 +468,77 @@ class BracketEvent {
             const currentRoundSets = losersBracket.filter((node) => node.round! === round)
             const nextRoundSets = losersBracket.filter((node) => node.round! === round + 1)
 
-            switch (round) {
-                case 1:
-                    winnersRound1
-                        .filter((set) => set.isLeftChild())
-                        .forEach((round1Set, index) => {
-                            const loserSet = currentRoundSets.find((set) => !set.parentSet)
-                            const parentIndex = winnersRound2.findIndex((parentSet) => parentSet.setId === round1Set.parentSet!.setId)
-                            const round2Set = winnersRound2.slice(0).reverse()[parentIndex]
+            if (round === 1) {
+                winnersRound1
+                    .filter((set) => set.isLeftChild())
+                    .forEach((round1Set, index) => {
+                        const loserSet = currentRoundSets.find((set) => !set.parentSet)
+                        const parentIndex = winnersRound2.findIndex((parentSet) => parentSet.setId === round1Set.parentSet!.setId)
+                        const round2Set = winnersRound2.slice(0).reverse()[parentIndex]
 
-                            if (winnersRound1.every((set) => set.getSibling())) {
-                                round1Set.assignLowerBracketSet(currentRoundSets[index])
-                                round1Set.getSibling()!.assignLowerBracketSet(currentRoundSets[index])
-                                nextRoundSets[index].addSet(currentRoundSets[index])
-                            } else if (winnersRound1.every((set) => !set.getSibling())) {
-                                round2Set.assignLowerBracketSet(loserSet)
+                        if (winnersRound1.every((set) => set.getSibling())) {
+                            round1Set.assignLowerBracketSet(currentRoundSets[index])
+                            round1Set.getSibling()!.assignLowerBracketSet(currentRoundSets[index])
+                            nextRoundSets[index].addSet(currentRoundSets[index])
+                        } else if (winnersRound1.every((set) => !set.getSibling())) {
+                            round2Set.assignLowerBracketSet(loserSet)
+                            round1Set.assignLowerBracketSet(loserSet)
+                            if (nextRoundSets[Math.floor(parentIndex / 2)]) nextRoundSets[Math.floor(parentIndex / 2)].addSet(loserSet)
+                            else {
+                                const setMatch = nextRoundSets.find((set) => !set.leftUpperBracketSet || !set.rightUpperBracketSet)
+                                if (setMatch) setMatch.addSet(loserSet)
+                            }
+                        } else {
+                            if (round1Set.getSibling()) {
                                 round1Set.assignLowerBracketSet(loserSet)
-                                if (nextRoundSets[Math.floor(parentIndex / 2)]) nextRoundSets[Math.floor(parentIndex / 2)].addSet(loserSet)
-                                else {
-                                    const setMatch = nextRoundSets.find((set) => !set.leftUpperBracketSet || !set.rightUpperBracketSet)
-                                    if (setMatch) setMatch.addSet(loserSet)
+                                round1Set.getSibling()!.assignLowerBracketSet(loserSet)
+                                if (nextRoundSets[index] && loserSet) {
+                                    nextRoundSets[index].addSet(loserSet)
+                                    round2Set.assignLowerBracketSet(loserSet!.parentSet!)
                                 }
                             } else {
-                                if (round1Set.getSibling()) {
-                                    round1Set.assignLowerBracketSet(loserSet)
-                                    round1Set.getSibling()!.assignLowerBracketSet(loserSet)
-                                    if (nextRoundSets[index] && loserSet) {
-                                        nextRoundSets[index].addSet(loserSet)
-                                        round2Set.assignLowerBracketSet(loserSet!.parentSet!)
-                                    }
-                                } else {
-                                    winnersRound2.slice(0).reverse()[index].assignLowerBracketSet(nextRoundSets[index])
-                                    round1Set.assignLowerBracketSet(nextRoundSets[index])
-                                }
+                                winnersRound2.slice(0).reverse()[index].assignLowerBracketSet(nextRoundSets[index])
+                                round1Set.assignLowerBracketSet(nextRoundSets[index])
+                            }
+                        }
+                    })
+
+                this.getAllUpperBracketSets()
+                    .filter((set) => set && set.loserSet)
+                    .forEach((set) => {
+                        firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId)
+                    })
+            } else {
+                if (nextRoundSets.length) {
+                    if (currentRoundSets.length !== nextRoundSets.length) {
+                        currentRoundSets
+                            .forEach((set) => {
+                                const parent = nextRoundSets.find((parent) => !parent.leftSet || !parent.rightSet)
+                                if (parent) parent!.addSet(set)
+                            })
+                    } else {
+                        currentRoundSets
+                            .forEach((set, index) => {
+                                const parent = nextRoundSets[index]
+                                if (parent) parent.addSet(set)
+                            })
+                    }
+
+                    if (firstTimeLoserSets.length) {
+                        if (round === 2) currentRoundSets.reverse()
+                        currentRoundSets.forEach((set) => {
+                            if (!set.leftUpperBracketSet && !set.leftSet) {
+                                const firstTimeLoserSet = firstTimeLoserSets.shift()!
+                                firstTimeLoserSet.assignLowerBracketSet(set)
+                            }
+
+                            if (!set.rightUpperBracketSet && !set.rightSet) {
+                                const firstTimeLoserSet = firstTimeLoserSets.shift()!
+                                firstTimeLoserSet.assignLowerBracketSet(set)
                             }
                         })
-
-                    this.getAllUpperBracketSets()
-                        .filter((set) => set && set.loserSet)
-                        .forEach((set) => {
-                            firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId)
-                        })
-
-                    break
-                default:
-                    if (nextRoundSets.length) {
-                        if (currentRoundSets.length !== nextRoundSets.length) {
-                            currentRoundSets
-                                .forEach((set) => {
-                                    const parent = nextRoundSets.find((parent) => !parent.leftSet || !parent.rightSet)
-                                    if (parent) parent!.addSet(set)
-                                })
-                        } else {
-                            currentRoundSets
-                                .forEach((set, index) => {
-                                    const parent = nextRoundSets[index]
-                                    if (parent) parent.addSet(set)
-                                })
-                        }
-
-                        if (firstTimeLoserSets.length) {
-                            if (round === 2) currentRoundSets.reverse()
-                            currentRoundSets.forEach((set) => {
-                                if (!set.leftUpperBracketSet && !set.leftSet) {
-                                    const firstTimeLoserSet = firstTimeLoserSets.shift()!
-                                    firstTimeLoserSet.assignLowerBracketSet(set)
-                                }
-
-                                if (!set.rightUpperBracketSet && !set.rightSet) {
-                                    const firstTimeLoserSet = firstTimeLoserSets.shift()!
-                                    firstTimeLoserSet.assignLowerBracketSet(set)
-                                }
-                            })
-                        }
                     }
-                    break
+                }
             }
 
             round++

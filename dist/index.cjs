@@ -308,6 +308,7 @@ var BracketEvent = class {
 	entrants = [];
 	sets = [];
 	state = EventState.Pending;
+	roundThreshold;
 	layout = TournamentStructures.SingleElimination;
 	numberOfEntrants = 3;
 	root;
@@ -315,13 +316,14 @@ var BracketEvent = class {
 	upperBracketRoot;
 	lowerBracketRoot;
 	constructor(props) {
-		const { entrants, layout, state, sets } = props;
+		const { entrants, layout, state, sets, roundThreshold } = props;
 		this.state = state || EventState.Pending;
 		this.numberOfEntrants = entrants.length;
 		this.layout = layout;
+		this.roundThreshold = Math.abs(roundThreshold ?? 0);
 		this.entrants = this.createEntrants(entrants);
 		this.sets = [];
-		this.root = this.entrants.length > 1 ? this.createBracketSets() : void 0;
+		this.root = this.createBracketSets();
 		this.upperBracketRoot = this.root;
 		if (this.entrants.length > 1) this.assignEntrants(this.entrants);
 		if (this.root) {
@@ -339,7 +341,18 @@ var BracketEvent = class {
 				});
 			}
 			if (sets) this.mapSets(sets);
+			if (this.roundThreshold > 0) this.sets = this.trimSets(this.roundThreshold);
 		}
+	}
+	trimSets(threshold) {
+		if (threshold <= 2) return this.sets.filter((set) => set.round <= 2);
+		const trimmedSets = this.getAllUpperBracketSets().filter((set) => set.round <= threshold);
+		if (this.layout === TournamentStructures.DoubleElimination) {
+			const finalSet = trimmedSets.slice(-1)[0];
+			const loserRoundThreshold = finalSet.loserSet ? finalSet.loserSet.round : 0;
+			trimmedSets.push(...this.getAllLowerBracketSets().filter((set) => set.round <= loserRoundThreshold));
+		}
+		return trimmedSets.length ? trimmedSets : this.sets;
 	}
 	/**
 	* Maps imported [sets]{@link Set} to [bracket sets.]{@link BracketSet}
@@ -618,59 +631,54 @@ var BracketEvent = class {
 		while (round <= numberOfRounds) {
 			const currentRoundSets = losersBracket.filter((node) => node.round === round);
 			const nextRoundSets = losersBracket.filter((node) => node.round === round + 1);
-			switch (round) {
-				case 1:
-					winnersRound1.filter((set) => set.isLeftChild()).forEach((round1Set, index) => {
-						const loserSet = currentRoundSets.find((set) => !set.parentSet);
-						const parentIndex = winnersRound2.findIndex((parentSet) => parentSet.setId === round1Set.parentSet.setId);
-						const round2Set = winnersRound2.slice(0).reverse()[parentIndex];
-						if (winnersRound1.every((set) => set.getSibling())) {
-							round1Set.assignLowerBracketSet(currentRoundSets[index]);
-							round1Set.getSibling().assignLowerBracketSet(currentRoundSets[index]);
-							nextRoundSets[index].addSet(currentRoundSets[index]);
-						} else if (winnersRound1.every((set) => !set.getSibling())) {
-							round2Set.assignLowerBracketSet(loserSet);
-							round1Set.assignLowerBracketSet(loserSet);
-							if (nextRoundSets[Math.floor(parentIndex / 2)]) nextRoundSets[Math.floor(parentIndex / 2)].addSet(loserSet);
-							else {
-								const setMatch = nextRoundSets.find((set) => !set.leftUpperBracketSet || !set.rightUpperBracketSet);
-								if (setMatch) setMatch.addSet(loserSet);
-							}
-						} else if (round1Set.getSibling()) {
-							round1Set.assignLowerBracketSet(loserSet);
-							round1Set.getSibling().assignLowerBracketSet(loserSet);
-							if (nextRoundSets[index] && loserSet) {
-								nextRoundSets[index].addSet(loserSet);
-								round2Set.assignLowerBracketSet(loserSet.parentSet);
-							}
-						} else {
-							winnersRound2.slice(0).reverse()[index].assignLowerBracketSet(nextRoundSets[index]);
-							round1Set.assignLowerBracketSet(nextRoundSets[index]);
+			if (round === 1) {
+				winnersRound1.filter((set) => set.isLeftChild()).forEach((round1Set, index) => {
+					const loserSet = currentRoundSets.find((set) => !set.parentSet);
+					const parentIndex = winnersRound2.findIndex((parentSet) => parentSet.setId === round1Set.parentSet.setId);
+					const round2Set = winnersRound2.slice(0).reverse()[parentIndex];
+					if (winnersRound1.every((set) => set.getSibling())) {
+						round1Set.assignLowerBracketSet(currentRoundSets[index]);
+						round1Set.getSibling().assignLowerBracketSet(currentRoundSets[index]);
+						nextRoundSets[index].addSet(currentRoundSets[index]);
+					} else if (winnersRound1.every((set) => !set.getSibling())) {
+						round2Set.assignLowerBracketSet(loserSet);
+						round1Set.assignLowerBracketSet(loserSet);
+						if (nextRoundSets[Math.floor(parentIndex / 2)]) nextRoundSets[Math.floor(parentIndex / 2)].addSet(loserSet);
+						else {
+							const setMatch = nextRoundSets.find((set) => !set.leftUpperBracketSet || !set.rightUpperBracketSet);
+							if (setMatch) setMatch.addSet(loserSet);
 						}
-					});
-					this.getAllUpperBracketSets().filter((set) => set && set.loserSet).forEach((set) => {
-						firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId);
-					});
-					break;
-				default:
-					if (nextRoundSets.length) {
-						if (currentRoundSets.length !== nextRoundSets.length) currentRoundSets.forEach((set) => {
-							const parent = nextRoundSets.find((parent$1) => !parent$1.leftSet || !parent$1.rightSet);
-							if (parent) parent.addSet(set);
-						});
-						else currentRoundSets.forEach((set, index) => {
-							const parent = nextRoundSets[index];
-							if (parent) parent.addSet(set);
-						});
-						if (firstTimeLoserSets.length) {
-							if (round === 2) currentRoundSets.reverse();
-							currentRoundSets.forEach((set) => {
-								if (!set.leftUpperBracketSet && !set.leftSet) firstTimeLoserSets.shift().assignLowerBracketSet(set);
-								if (!set.rightUpperBracketSet && !set.rightSet) firstTimeLoserSets.shift().assignLowerBracketSet(set);
-							});
+					} else if (round1Set.getSibling()) {
+						round1Set.assignLowerBracketSet(loserSet);
+						round1Set.getSibling().assignLowerBracketSet(loserSet);
+						if (nextRoundSets[index] && loserSet) {
+							nextRoundSets[index].addSet(loserSet);
+							round2Set.assignLowerBracketSet(loserSet.parentSet);
 						}
+					} else {
+						winnersRound2.slice(0).reverse()[index].assignLowerBracketSet(nextRoundSets[index]);
+						round1Set.assignLowerBracketSet(nextRoundSets[index]);
 					}
-					break;
+				});
+				this.getAllUpperBracketSets().filter((set) => set && set.loserSet).forEach((set) => {
+					firstTimeLoserSets = firstTimeLoserSets.filter((firstTimeLoserSet) => firstTimeLoserSet && set && firstTimeLoserSet.setId !== set.setId);
+				});
+			} else if (nextRoundSets.length) {
+				if (currentRoundSets.length !== nextRoundSets.length) currentRoundSets.forEach((set) => {
+					const parent = nextRoundSets.find((parent$1) => !parent$1.leftSet || !parent$1.rightSet);
+					if (parent) parent.addSet(set);
+				});
+				else currentRoundSets.forEach((set, index) => {
+					const parent = nextRoundSets[index];
+					if (parent) parent.addSet(set);
+				});
+				if (firstTimeLoserSets.length) {
+					if (round === 2) currentRoundSets.reverse();
+					currentRoundSets.forEach((set) => {
+						if (!set.leftUpperBracketSet && !set.leftSet) firstTimeLoserSets.shift().assignLowerBracketSet(set);
+						if (!set.rightUpperBracketSet && !set.rightSet) firstTimeLoserSets.shift().assignLowerBracketSet(set);
+					});
+				}
 			}
 			round++;
 		}
